@@ -102,7 +102,7 @@ void escuchar_mensajes(int sockfd) {
     char buffer[MSG_SIZE];
 
     while (1) {
-        memset(buffer, 0, MSG_SIZE);
+        memset(buffer, 0, MSG_SIZE);  //memset sirve para llenar un bloque de memoria con un valor específico, en este caso 0
         int n = recvfrom(sockfd, buffer, MSG_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
         if (n < 0) {
             perror("recvfrom");
@@ -147,6 +147,7 @@ void escuchar_mensajes(int sockfd) {
                 //El formato "# %s %d" indica que se espera un string (ip) seguido de un entero (numeros)
                 printf("IP recibida: %s\n", ip);
                 printf("Número recibido: %d\n", numeros);
+
             
                 if (numeros > numero_ramdon) {
                     printf("CONTINUA ESCLAVO, El número recibido es mayor que el número aleatorio: %d\n", numero_ramdon);
@@ -164,7 +165,7 @@ void escuchar_mensajes(int sockfd) {
                     printf("\n");
 
                     uint32_t mi_ip = ntohl(inet_addr(ip_global));
-                    uint32_t otra_ip = ntohl(inet_addr(ip_recibida));
+                    uint32_t otra_ip = ntohl(inet_addr(ip_recibida)); // IP del cliente que envió el mensaje
                       //Aqui se convierte la IP a formato de host (orden de bytes del host) para compararlas
                     //La función inet_addr convierte una cadena de caracteres (en este caso la IP) a una dirección IP en formato binario
                     //La función ntohl convierte el número de puerto de red a host byte order (en este caso el puerto recibido)
@@ -191,6 +192,16 @@ void escuchar_mensajes(int sockfd) {
                         printf("\n");
                         printf("\n");
                     } 
+
+                    else if (inet_addr(ip_global) > inet_addr(ip)) {
+                        printf("CONTINUA ESCLAVO, IP del sistema (%s) es mayor que la IP recibida (%s)\n", ip_global, ip);
+                        modo = 1; // Cambiar a modo esclavo
+                        modo_voto = 0; // Cambiar a modo de no votación, porque el sistema ya perdió
+                        printf("\n");
+                        printf("\n");
+                        printf("\n");
+                    } 
+                    
                     
                     else {
                         printf("Las IPs son iguales\n");
