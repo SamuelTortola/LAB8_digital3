@@ -41,6 +41,7 @@ int number_random(void);
 void modo_maestro(int puerto);
 void modo_esclavo(int puerto);
 void escuchar_mensajes(int sockfd);
+void obtener_ip_local(void);
 
 //--Funciones--//
 int number_random(void) {
