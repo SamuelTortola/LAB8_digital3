@@ -42,7 +42,8 @@ int modo = 1, modo_voto = 0;  //1 para modo esclavo, 0 para modo maestro
 
 char ip_global[IP_SIZE]; //  Variable global para almacenar la IP local
 char broadcast_ip[INET_ADDRSTRLEN]; // Variable global para guardar IP broadcast
-char ip_recibida[INET_ADDRSTRLEN];                // La IP que viene del mensaje
+char ip_recibida[INET_ADDRSTRLEN];      // La IP que viene del mensaje
+char ip_recibida_cliente[INET_ADDRSTRLEN];  // La IP que viene del cliente que envia "VOTE" y "QUIEN ES"
 
 int sockfd, n;  // Descriptores de socket y variable de envio de mensajes
 
@@ -51,14 +52,6 @@ socklen_t broadcast_length = sizeof(struct sockaddr_in); // Tamaño de la estruc
 
 int puerto = 2000; // Puerto por defecto
 int numero_ramdon;
-
-typedef struct {
-    char ip[INET_ADDRSTRLEN];
-    int numero;
-} Voto;
-
-Voto votos_recibidos[40] // Define un tamaño máximo
-int total_votos = 0;
 
 
 
@@ -74,7 +67,6 @@ void inicializar_broadcast(int puerto);
 void obtener_ip_local(void);
 void error(const char *msg);
 void espera_aleatoria(void);
-
 
 
 
@@ -127,8 +119,18 @@ void escuchar_mensajes(int sockfd) {
             // buffer es el mensaje recibido
             // strcspn elimina el salto de línea del buffer si existe
             // %s es para cadenas de caracteres, %d es para enteros
-        printf("Recibido desde %s:%d - Mensaje: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buffer);
-         //Recibir el mensaje, pero no hacer nada con él, a menos que sea un mensaje de votación o descubrimiento
+            
+            if (modo_voto == 0){   //Mostrar solo mensajes normales, si no esta en modo normal, y no votación
+            printf("Recibido desde %s:%d - Mensaje: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buffer);
+            }
+
+            //Recibir el mensaje, pero no hacer nada con él, a menos que sea un mensaje de votación o descubrimiento
+            strcpy(ip_recibida, inet_ntoa(addr.sin_addr)); // Guardar la IP recibida en la variable global
+           //La función strcpy se usa para copiar una cadena de caracteres (en este caso la IP) a otra variable (ip_recibida)
+               
+                //La función inet_ntoa convierte una dirección IP en formato binario a una cadena de caracteres (en este caso la IP recibida)
+                //La función ntohs convierte el número de puerto de red a host byte order (en este caso el puerto recibido)
+     
                
         //La función strcspn se usa para encontrar la longitud de la cadena hasta el primer carácter que coincide con el segundo argumento (en este caso "\n")
 
@@ -136,12 +138,6 @@ void escuchar_mensajes(int sockfd) {
         buffer[strcspn(buffer, "\n")] = 0;  // elimina salto de línea si viene en el buffer
 
         if (modo_voto == 1){
-
-            strcpy(ip_recibida, inet_ntoa(addr.sin_addr)); // Guardar la IP recibida en la variable global
-            //La función strcpy se usa para copiar una cadena de caracteres (en este caso la IP) a otra variable (ip_recibida)
-                
-                 //La función inet_ntoa convierte una dirección IP en formato binario a una cadena de caracteres (en este caso la IP recibida)
-                 //La función ntohs convierte el número de puerto de red a host byte order (en este caso el puerto recibido)
             char ip[INET_ADDRSTRLEN];
             int numeros;
             
@@ -152,7 +148,7 @@ void escuchar_mensajes(int sockfd) {
                 printf("Número recibido: %d\n", numeros);
             
                 if (numeros > numero_ramdon) {
-                    printf("CONTINUA ESCLAVO, El número es mayor que el número aleatorio: %d\n", numero_ramdon);
+                    printf("CONTINUA ESCLAVO, El número recibido es mayor que el número aleatorio: %d\n", numero_ramdon);
                     modo = 1; // Cambiar a modo esclavo
                     modo_voto = 0; // Cambiar a modo de no votación, porque el sistema ya perdió
                     printf("\n");
@@ -161,7 +157,7 @@ void escuchar_mensajes(int sockfd) {
                 } 
 
                 else if (numeros == numero_ramdon) {
-                    printf("Continua verificación por IP, El número es igual al número aleatorio: %d\n", numero_ramdon);
+                    printf("Continua verificación por IP, El número recibido es igual al número aleatorio: %d\n", numero_ramdon);
                     printf("\n");
                     printf("\n");
                     printf("\n");
@@ -178,6 +174,9 @@ void escuchar_mensajes(int sockfd) {
 
                     if (mi_ip < otra_ip) {
                         printf(" CONTINUA MAESTRO.  IP del sistema (%s) es menor que la IP recibida (%s)\n", ip_global, ip_recibida);
+                        printf("\n");
+                        printf("\n");
+                        printf("\n");
                         modo = 0; // Cambiar a modo maestro
                         printf("\n");
 
@@ -187,16 +186,22 @@ void escuchar_mensajes(int sockfd) {
                         printf("CONTINUA ESCLAVO, IP del sistema (%s) es mayor que la IP recibida (%s)\n", ip_global, ip_recibida);
                         modo = 1; // Cambiar a modo esclavo
                         modo_voto = 0; // Cambiar a modo de no votación, porque el sistema ya perdió
+                        printf("\n");
+                        printf("\n");
+                        printf("\n");
                     } 
                     
                     else {
                         printf("Las IPs son iguales\n");
+                        printf("\n");
+                        printf("\n");
+                        printf("\n");
                     }
 
                 } 
                     
                 else if (numeros < numero_ramdon) {
-                    printf("CONTINUA MAESTRO, El número es menor que el número aleatorio: %d\n", numero_ramdon);
+                    printf("CONTINUA MAESTRO, El número recibido es menor que el número aleatorio: %d\n", numero_ramdon);
                     modo = 0; // Cambiar a modo maestro
                     printf("\n");
                     printf("\n");
@@ -206,10 +211,8 @@ void escuchar_mensajes(int sockfd) {
             } 
             
             else {
-                printf("Formato incorrecto en buffer\n");
-            }
-            
 
+            }
 
 
         }
@@ -220,32 +223,36 @@ void escuchar_mensajes(int sockfd) {
             //Esta forma de comparar el buffer que se usa strcmp es para comparar cadenas de caracteres, 
             //en este caso el buffer y la cadena "QUIEN ES", se iguala a a 0 porque si son iguales
             //la función strcmp devuelve 0, si no son iguales devuelve un valor diferente de 0.
-            modo_voto = 0; // Cambiar a modo de no votación, porque el sistemq quedo como maestro de todos
-
+            modo_voto = 0; // Cambiar a modo de no votación, porque el sistema quedo como maestro de todos
 
 
             
-            broadcast_addr.sin_addr.s_addr = inet_addr(broadcast_ip);
+            broadcast_addr.sin_addr.s_addr = inet_addr(ip_recibida_cliente);
             char mensaje[MSG_SIZE];  // Buffer para el mensaje
-            snprintf(mensaje, MSG_SIZE, "# %s %d\n", ip_global, numero_ramdon);
+            snprintf(mensaje, MSG_SIZE, "Alan y Samuel en %s - master\n", ip_global);
             n = sendto(sockfd, mensaje, strlen(mensaje), 0,
                        (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
             if (n < 0)
                 error("sendto");
             
+        }
 
-            
-        } else if (modo == 1 && strcmp(buffer, "QUIEN ES") == 0) {
+         else if (modo == 1 && strcmp(buffer, "QUIEN ES") == 0) {
+            modo_voto = 0; // Cambiar a modo de no votación
             // ignorar porque es esclavo
 
 
         } 
+
+
         else if (strcmp(buffer, "VOTE") == 0) {  // iniciar proceso de votación
+            strcpy(ip_recibida_cliente, inet_ntoa(addr.sin_addr)); // Guardar la IP recibida del ciente en la variable global
             printf("\n");
             printf("\n");
-            printf("Iniciando proceso de votación...\n");
+            printf("________________________Iniciando proceso de votación______________________________\n");
             modo_voto = 1; // Cambiar a modo de votación
             numero_ramdon = number_random();
+            printf("\n");
             printf("Enviando a todos: # %s %d\n", ip_global, numero_ramdon);
             printf("\n");
             printf("\n");
