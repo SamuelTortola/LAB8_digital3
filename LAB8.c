@@ -27,6 +27,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
+#include <net/if.h>
+
 
 
 
@@ -34,8 +36,20 @@
 //DEFINICIONES Y VARIABLES GLOBALES
 /////////////////////////////////////////////////////////////
 #define MSG_SIZE 60		// Tamaño (máximo) del mensaje.
-int modo = 1;  //1 para modo esclavo, 0 para modo maestro
+int modo = 1, modo_voto = 0;  //1 para modo esclavo, 0 para modo maestro
 
+#define IP_SIZE INET_ADDRSTRLEN // Tamaño de la IP (IPv4)
+
+char ip_global[IP_SIZE]; //  Variable global para almacenar la IP local
+char broadcast_ip[INET_ADDRSTRLEN]; // Variable global para guardar IP broadcast
+
+int sockfd, n;  // Descriptores de socket y variable de envio de mensajes
+
+struct sockaddr_in broadcast_addr; // Estructura para la dirección de broadcast
+socklen_t broadcast_length = sizeof(struct sockaddr_in); // Tamaño de la estructura de dirección de broadcast
+
+int puerto = 2000; // Puerto por defecto
+int numero_ramdon;
 
 
 /////////////////////////////////////////////////////////////
@@ -46,6 +60,11 @@ int number_random(void);
 void modo_maestro(int puerto);
 void modo_esclavo(int puerto);
 void escuchar_mensajes(int sockfd);
+void inicializar_broadcast(int puerto);
+void obtener_ip_local(void);
+void error(const char *msg);
+void espera_aleatoria(void);
+
 
 
 //--Funciones--//
@@ -54,6 +73,21 @@ int number_random(void) {
     int max = 10, min = 1; // Rango de números aleatorios
     int random_number = (rand() % (max - min + 1)) + min;
     return random_number;
+}
+
+void error(const char *msg) //Función para manejar errores
+{
+    perror(msg);
+    exit(0);
+}
+
+void espera_aleatoria() {
+
+    // Generar número aleatorio entre 100000 (0.1s) y 2000000 (2s)
+    int microsegundos = (rand() % (2000000 - 100000 + 1)) + 100000;
+
+    // Esperar ese tiempo
+    usleep(microsegundos);
 }
 
 
@@ -71,16 +105,118 @@ void escuchar_mensajes(int sockfd) {
             continue;
         }
 
-        printf("Recibido desde %s:%d - Mensaje: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buffer);
+        if (strcmp(inet_ntoa(addr.sin_addr), ip_global) == 0) {
+            // Si la IP de origen es la misma que la IP local, ignorar el mensaje
+        } 
         
-        if (modo == 0 && strcmp(buffer, "QUIEN ES") == 0) {
-            // responder al cliente
-        } else if (modo == 1 && strcmp(buffer, "QUIEN ES") == 0) {
-            // ignorar
-        } else if (strcmp(buffer, "VOTE") == 0) {
-            // iniciar proceso de votación
+        else {
+            // Imprimir el mensaje recibido
+            // inet_ntoa convierte la dirección IP en una cadena de caracteres
+            // ntohs convierte el número de puerto de red a host byte order
+            // buffer es el mensaje recibido
+            // strcspn elimina el salto de línea del buffer si existe
+            // %s es para cadenas de caracteres, %d es para enteros
+        printf("Recibido desde %s:%d - Mensaje: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buffer);
+         //Recibir el mensaje, pero no hacer nada con él, a menos que sea un mensaje de votación o descubrimiento
+        
+        buffer[strcspn(buffer, "\n")] = 0;  // elimina salto de línea si viene en el buffer
+
+        if (modo_voto == 1){
+            char ip[INET_ADDRSTRLEN];
+            int numeros;
+            
+            if (sscanf(buffer, "# %s %d", ip, &numeros) == 2) {
+                printf("IP recibida: %s\n", ip);
+                printf("Número recibido: %d\n", numeros);
+            
+                if (numeros > numero_ramdon) {
+                    printf("Continua esclavo, El número es mayor que el número aleatorio: %d\n", numero_ramdon);
+                    modo = 1; // Cambiar a modo esclavo
+                    printf("\n");
+                    printf("\n");
+                    printf("\n");
+                } 
+
+                else if (numeros == numero_ramdon) {
+                    printf("Continua verificación por IP, El número es igual al número aleatorio: %d\n", numero_ramdon);
+                    printf("\n");
+                    printf("\n");
+                    printf("\n");
+                } 
+                    
+                else if (numeros < numero_ramdon) {
+                    printf("Continua maestro, El número es menor que el número aleatorio: %d\n", numero_ramdon);
+                    modo = 0; // Cambiar a modo maestro
+                    printf("\n");
+                    printf("\n");
+                    printf("\n");
+                }
+                
+            } 
+            
+            else {
+                printf("Formato incorrecto en buffer\n");
+            }
+            
+
+
+
         }
+ 
+
+
+        if (modo == 0 && strcmp(buffer, "QUIEN ES") == 0) { //Si esta en modo maestro
+            //Esta forma de comparar el buffer que se usa strcmp es para comparar cadenas de caracteres, 
+            //en este caso el buffer y la cadena "QUIEN ES", se iguala a a 0 porque si son iguales
+            //la función strcmp devuelve 0, si no son iguales devuelve un valor diferente de 0.
+            
+
+            
+        } else if (modo == 1 && strcmp(buffer, "QUIEN ES") == 0) {
+            // ignorar porque es esclavo
+
+
+        } 
+        else if (strcmp(buffer, "VOTE") == 0) {  // iniciar proceso de votación
+            printf("\n");
+            printf("\n");
+            printf("Iniciando proceso de votación...\n");
+            modo_voto = 1; // Cambiar a modo de votación
+            numero_ramdon = number_random();
+            printf("Enviando a todos: # %s %d\n", ip_global, numero_ramdon);
+            printf("\n");
+            printf("\n");
+            printf("\n");
+            espera_aleatoria(); // Esperar un tiempo aleatorio antes de enviar el mensaje
+
+
+
+            broadcast_addr.sin_addr.s_addr = inet_addr(broadcast_ip);
+
+            char mensaje[MSG_SIZE];  // Buffer para el mensaje
+
+            //snprintf sirve para rellenar la cadena de caracteres, en este caso el mensaje
+
+            // esta función se usa así: int snprintf(char *str, size_t size, const char *format, ...);
+            //str: el buffer donde se va a escribir (como una variable char mensaje[100];)
+            //size: el tamaño máximo que puede escribir (para evitar sobrepasarse)
+            //format: como en printf, usás %s, %d, etc.
+            //y luego los valores a insertar
+           
+         
+            snprintf(mensaje, MSG_SIZE, "# %s %d\n", ip_global, numero_ramdon);
+            
+            // Enviar el mensaje
+            n = sendto(sockfd, mensaje, strlen(mensaje), 0,
+                       (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
+            if (n < 0)
+                error("sendto");
+
+
+        }
+      }
     }
+
 }
 
 // Función para modo esclavo
@@ -129,10 +265,12 @@ void modo_maestro(int puerto) {
     escuchar_mensajes(sockfd);
 }
 
+//NOTA: ESTAS  DOS ULTIMAS FUNCIONES SOLO SE ACTIVAN CUANDO SE EJECUTA EL CÓDIGO, NO DURANTE LA EJECUCIÓN. 
+//ESTAS FUNCIONES SIRVEN PARA MOSTRAR EN QUE SE INICIA EL PROGRAMA Y EN QUE PUERTO SE INICIA. NO EN QUE  MODO TERMINA
 
 void obtener_ip_local() {
     struct ifaddrs *ifaddr, *ifa;
-    char ip[INET_ADDRSTRLEN];
+  
 
     // Obtener todas las interfaces
     if (getifaddrs(&ifaddr) == -1) {
@@ -142,16 +280,29 @@ void obtener_ip_local() {
 
     // Recorremos todas las interfaces
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        // Si la dirección es IPv4 (AF_INET) y no es loopback
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, "lo") != 0) {
+         // Si la dirección es IPv4 (AF_INET), no loopback y tiene broadcast
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, "lo") != 0 && ifa->ifa_flags & IFF_BROADCAST && ifa->ifa_broadaddr != NULL) {
+
             struct sockaddr_in *addr = (struct sockaddr_in *)ifa->ifa_addr;
-            inet_ntop(AF_INET, &addr->sin_addr, ip, sizeof(ip));
-            printf("Interfaz %s -> IP: %s\n", ifa->ifa_name, ip);
+            struct sockaddr_in *bcast = (struct sockaddr_in *)ifa->ifa_broadaddr;
+
+            inet_ntop(AF_INET, &addr->sin_addr, ip_global, sizeof(ip_global));
+            inet_ntop(AF_INET, &bcast->sin_addr, broadcast_ip, sizeof(broadcast_ip));
+            printf("Interfaz %s -> IP: %s, Broadcast: %s\n", ifa->ifa_name, ip_global, broadcast_ip);
         }
     }
 
     freeifaddrs(ifaddr);
 }
+
+
+void inicializar_broadcast(int puerto) {
+    //Función para inicializar la dirección de broadcast
+    memset(&broadcast_addr, 0, sizeof(broadcast_addr));
+    broadcast_addr.sin_family = AF_INET;
+    broadcast_addr.sin_port = htons(puerto);  
+}
+
 
 
 /////////////////////////////////////////////////////////////
@@ -166,14 +317,20 @@ int main(int argc, char *argv[]) {
 
     if (argc != 2) {
         fprintf(stderr, "Uso: %s <puerto>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
+        printf("Colocando puerto por defecto: 2000\n");
+        printf("Para cambiar el puerto, ejecuta el programa con el puerto deseado como argumento.\n");
+        printf("Ejemplo: %s 3000\n", argv[0]);
 
-    int puerto = atoi(argv[1]);
+
+    }
+    if (argc == 2) {
+
+     puerto = atoi(argv[1]);
+    }
 
     if (puerto <= 1025 || puerto > 65535) {
         // Evitar puertos reservados (0–1023) y dejar margen de seguridad
-        fprintf(stderr, "Puerto inválido. Debe ser un número entre 1 y 65535.\n");
+        fprintf(stderr, "Puerto inválido. Debe ser un número entre 1025 y 65535.\n");
         exit(EXIT_FAILURE);
     }
     printf("\n");
@@ -183,6 +340,9 @@ int main(int argc, char *argv[]) {
     printf("***************** Información del socket: *********************************\n");
     printf("\n");
     obtener_ip_local();
+    inicializar_broadcast(puerto);
+    srand(time(NULL)); // Inicializar la semilla para tiempos aleatorios
+
 
     while (1){
         if (modo == 0){
