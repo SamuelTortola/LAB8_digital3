@@ -70,6 +70,7 @@ void espera_aleatoria(void);
 
 
 
+
 //--Funciones--//
 int number_random(void) {
     srand(time(NULL)); // Inicializar la semilla con el tiempo actual
