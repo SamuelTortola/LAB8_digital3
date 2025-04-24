@@ -217,7 +217,6 @@ void escuchar_mensajes(int sockfd) {
             //Esta forma de comparar el buffer que se usa strcmp es para comparar cadenas de caracteres, 
             //en este caso el buffer y la cadena "QUIEN ES", se iguala a a 0 porque si son iguales
             //la función strcmp devuelve 0, si no son iguales devuelve un valor diferente de 0.
-            modo_voto = 0; // Cambiar a modo de no votación, porque el sistema quedo como maestro de todos
 
 
             
