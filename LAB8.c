@@ -29,9 +29,6 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 
-
-
-
 /////////////////////////////////////////////////////////////
 //DEFINICIONES Y VARIABLES GLOBALES
 /////////////////////////////////////////////////////////////
@@ -53,8 +50,6 @@ socklen_t broadcast_length = sizeof(struct sockaddr_in); // Tamaño de la estruc
 int puerto = 2000; // Puerto por defecto
 int numero_ramdon;
 
-
-
 /////////////////////////////////////////////////////////////
 //FUNCIONES
 /////////////////////////////////////////////////////////////
@@ -67,8 +62,6 @@ void inicializar_broadcast(int puerto);
 void obtener_ip_local(void);
 void error(const char *msg);
 void espera_aleatoria(void);
-
-
 
 //--Funciones--//
 int number_random(void) {
@@ -378,9 +371,6 @@ void inicializar_broadcast(int puerto) {
     broadcast_addr.sin_family = AF_INET;
     broadcast_addr.sin_port = htons(puerto);  
 }
-
-
-
 
 /////////////////////////////////////////////////////////////
 //PROGRAMA PRINCIPAL
