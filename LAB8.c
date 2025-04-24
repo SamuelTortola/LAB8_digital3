@@ -63,6 +63,9 @@ void obtener_ip_local(void);
 void error(const char *msg);
 void espera_aleatoria(void);
 
+
+
+
 //--Funciones--//
 int number_random(void) {
     srand(time(NULL)); // Inicializar la semilla con el tiempo actual
@@ -94,7 +97,7 @@ void escuchar_mensajes(int sockfd) {
     char buffer[MSG_SIZE];
 
     while (1) {
-        memset(buffer, 0, MSG_SIZE);
+        memset(buffer, 0, MSG_SIZE);  //memset sirve para llenar un bloque de memoria con un valor específico, en este caso 0
         int n = recvfrom(sockfd, buffer, MSG_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
         if (n < 0) {
             perror("recvfrom");
@@ -139,6 +142,7 @@ void escuchar_mensajes(int sockfd) {
                 //El formato "# %s %d" indica que se espera un string (ip) seguido de un entero (numeros)
                 printf("IP recibida: %s\n", ip);
                 printf("Número recibido: %d\n", numeros);
+
             
                 if (numeros > numero_ramdon) {
                     printf("CONTINUA ESCLAVO, El número recibido es mayor que el número aleatorio: %d\n", numero_ramdon);
@@ -155,18 +159,9 @@ void escuchar_mensajes(int sockfd) {
                     printf("\n");
                     printf("\n");
 
-                    uint32_t mi_ip = ntohl(inet_addr(ip_global));
-                    uint32_t otra_ip = ntohl(inet_addr(ip_recibida));
-                      //Aqui se convierte la IP a formato de host (orden de bytes del host) para compararlas
-                    //La función inet_addr convierte una cadena de caracteres (en este caso la IP) a una dirección IP en formato binario
-                    //La función ntohl convierte el número de puerto de red a host byte order (en este caso el puerto recibido)
-                    //host byte order es el orden de bytes que usa la computadora para almacenar los números
-                    //network byte order es el orden de bytes que usa la red para transmitir los números
-
-                    //Practicamente una ip como 192.168.1.10  se convierte a un número de 32 bits y si se convierte a entero, se puede comparar
-
-                    if (mi_ip < otra_ip) {
-                        printf(" CONTINUA MAESTRO.  IP del sistema (%s) es menor que la IP recibida (%s)\n", ip_global, ip_recibida);
+                        //La función inet_addr convierte una dirección IP en formato de cadena a formato binario
+                    if ((inet_addr(ip_global) < inet_addr(ip))) {
+                        printf(" CONTINUA MAESTRO.  IP del sistema (%s) es menor que la IP recibida (%s)\n", ip_global, ip);
                         printf("\n");
                         printf("\n");
                         printf("\n");
@@ -174,9 +169,9 @@ void escuchar_mensajes(int sockfd) {
                         printf("\n");
 
                     } 
-                    
-                    else if (mi_ip > otra_ip) {
-                        printf("CONTINUA ESCLAVO, IP del sistema (%s) es mayor que la IP recibida (%s)\n", ip_global, ip_recibida);
+
+                    else if (inet_addr(ip_global) > inet_addr(ip)) {
+                        printf("CONTINUA ESCLAVO, IP del sistema (%s) es mayor que la IP recibida (%s)\n", ip_global, ip);
                         modo = 1; // Cambiar a modo esclavo
                         modo_voto = 0; // Cambiar a modo de no votación, porque el sistema ya perdió
                         printf("\n");
@@ -184,8 +179,9 @@ void escuchar_mensajes(int sockfd) {
                         printf("\n");
                     } 
                     
+                       
                     else {
-                        printf("Las IPs son iguales\n");
+                        printf("Las IPs son iguales, no se puede comparar\n");
                         printf("\n");
                         printf("\n");
                         printf("\n");
@@ -216,7 +212,6 @@ void escuchar_mensajes(int sockfd) {
             //Esta forma de comparar el buffer que se usa strcmp es para comparar cadenas de caracteres, 
             //en este caso el buffer y la cadena "QUIEN ES", se iguala a a 0 porque si son iguales
             //la función strcmp devuelve 0, si no son iguales devuelve un valor diferente de 0.
-            modo_voto = 0; // Cambiar a modo de no votación, porque el sistema quedo como maestro de todos
 
 
             
